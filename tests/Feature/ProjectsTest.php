@@ -18,7 +18,7 @@ class ProjectsTest extends TestCase
 
 
     /** @test */
-    public function only_authenticathed_users_can_create_project(): void
+    public function guests_cannot_create_projects(): void
     {
         $attributes = Project::factory()->raw();
 
@@ -26,8 +26,53 @@ class ProjectsTest extends TestCase
     }
 
 
+
     /** @test */
-    public function a_user_can_create_a_project(): void
+    public function guests_cannot_view_projects(): void
+    {
+
+        $this->get('/projects')->assertRedirect('login');
+    }
+
+
+    /** @test */
+    public function guests_cannot_view_a_single_project(): void
+    {
+
+        $project = Project::factory()->create();
+
+        $this->get($project->path())->assertRedirect('login');
+    }
+
+
+    /** @test */
+    public function a_user_can_view_their_project(): void
+    {
+        $this->be(User::factory()->create());
+
+        $this->withoutExceptionHandling();
+
+        $project = Project::factory()->create(['owner_id' => auth()->id()]);
+
+        $this->get($project->path())
+            ->assertSee($project->title)
+            ->assertSee($project->description);
+    }
+
+    /** @test */
+    public function an_authenticated_user_cannot_view_the_projects_of_others(): void
+    {
+        $this->be(User::factory()->create());
+
+        $project = Project::factory()->create();
+
+        $this->get($project->path())
+            ->assertStatus(403);
+    }
+
+
+    /** @test */
+    public function guests_cannot_create_a_project(): void
     {
 
         $this->withoutExceptionHandling();
@@ -46,18 +91,6 @@ class ProjectsTest extends TestCase
         $this->get('/projects')->assertSee($attributes['title']);
     }
 
-
-    /** @test */
-    public function a_user_can_view_a_project(): void
-    {
-        $this->withoutExceptionHandling();
-
-        $project = Project::factory()->create();
-
-        $this->get('/projects/' . $project->id)
-            ->assertSee($project->title)
-            ->assertSee($project->description);
-    }
 
     /** @test */
     public function a_project_requires_a_title(): void
